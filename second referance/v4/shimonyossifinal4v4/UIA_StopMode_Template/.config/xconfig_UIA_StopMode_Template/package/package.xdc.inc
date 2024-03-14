@@ -1,0 +1,12 @@
+package.xdc
+package.xs
+package/xconfig_UIA_StopMode_Template.sch
+package/.vers_g200
+package/.vers_r200
+package/.vers_b200
+package/.xdc-K04
+package/xconfig_UIA_StopMode_Template.java
+package/xconfig_UIA_StopMode_Template.class
+package/package_xconfig_UIA_StopMode_Template.c
+package/package.defs.h
+package/xconfig_UIA_StopMode_Template.ccs
