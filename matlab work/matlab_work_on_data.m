@@ -57,7 +57,6 @@ load LP_coeff.mat;
 filteredData_LP = sosfilt(SOS, data);
 filteredData_LP = filteredData_LP * G(end);
 
-
 % Now you can plot the filtered data
 figure(5);
 plot(samples, filteredData_LP);
@@ -141,18 +140,66 @@ sosNotchFilter = design(notchFilter, 'butter');
 
 % SOS matrix where each row corresponds to the coefficients of a second-order filter section
 sosMatrix = sosNotchFilter.sosMatrix;
-disp('SOS Coefficients:');
+disp('SOS Coefficients:(of the notch)');
 disp(sosMatrix);
 
 % Scale values for the SOS sections
 scaleValues = sosNotchFilter.ScaleValues;
-disp('Scale Values:');
+disp('Scale Values: (of the notch)');
 disp(scaleValues);
 
 % You can also extract the 'b' and 'a' coefficients if you prefer that format.
 % However, this is not recommended for high order filters due to numerical instability.
 [b, a] = sos2tf(sosNotchFilter.sosMatrix, sosNotchFilter.ScaleValues);
-disp('Numerator coefficients (b):');
+disp('Numerator coefficients of the LPF (b):');
 disp(b);
-disp('Denominator coefficients (a):');
+disp('Denominator coefficients of the LPF(a):');
 disp(a);
+
+%% third filter-HPF on the big delta at DC frequency
+hpCutoff = 2;  % Very low cutoff frequency, just above 0 Hz
+hpOrder = 4;     % Possibly a higher filter order for a sharper cutoff
+
+% Normalize the cutoff frequency w.r.t Nyquist frequency (half the sampling rate)
+Wn = hpCutoff / (fs/2);
+
+% Design a Butterworth high-pass filter
+[hpB, hpA] = butter(hpOrder, Wn, 'high');
+
+% Display the filter coefficients
+disp('Filter numerator coefficients of the HPF(b):');
+disp(hpB);
+disp('Filter denominator coefficients of the HPF(a):');
+disp(hpA);
+
+% Apply the high-pass filter to the data
+filteredData_HP = filtfilt(hpB, hpA, filteredData_notch);
+
+% Plot the filtered data
+figure(13);
+plot(samples, filteredData_HP);
+xlabel('Sample Index');
+ylabel('Filtered Data Value (after LPF,NOTCH AND HPF)');
+title('Filtered heartbeat Data using LPF and then notch at 60 Hz and then HPF for DC noise');
+
+F_LP_notch_HP=fft(filteredData_HP,np);
+twoSidedPowerSpectrum_LP_notch=abs(F_LP_notch_HP/np);
+frequencyForTwoSidedSpectrum_LP_notch_HP=-np/2:np/2-1;
+
+% Plotting the two-sided FFT
+figure(14)
+plot(frequencyForTwoSidedSpectrum_LP_notch_HP,twoSidedPowerSpectrum_LP_notch);
+title('two-Sided FFT of heartbeat Data Signal after LPF and notch at 60 Hz and then HPF for DC noise');
+xlabel('non arranged frequency (Hz)');
+ylabel('power');
+
+% Plotting the one-sided FFT
+oneSidedPowerSpectrum_LP_notch_HP=twoSidedPowerSpectrum_LP_notch(1:np/2+1);
+oneSidedPowerSpectrum_LP_notch_HP(2:end-1)=2*oneSidedPowerSpectrum_LP_notch_HP(2:end-1);
+frequency = fs/2*linspace(0,1,np/2+1);
+
+figure(15)
+plot(frequency,oneSidedPowerSpectrum_LP_notch_HP)
+title('One-Sided FFT of heartbeat Data Signal after LPF and notch at 60 Hz and then HPF for DC noise');
+xlabel('arranged frequency (Hz)');
+ylabel('power');
