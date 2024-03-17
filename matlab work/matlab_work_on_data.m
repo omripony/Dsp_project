@@ -50,12 +50,13 @@ colormap('jet'); % Use the 'jet' colormap for better visibility
 colorbar;
 caxis([-100 20]) % Adjust the color axis to improve contrast
 
+%% first filter-LP
 load LP_coeff.mat;
 
-for i = 1:size(SOS, 1)
-    filteredData_LP = filteredData_LP * G(i);
-end
+% Apply the SOS filter to the data
+filteredData_LP = sosfilt(SOS, data);
 filteredData_LP = filteredData_LP * G(end);
+
 
 % Now you can plot the filtered data
 figure(5);
@@ -82,13 +83,76 @@ frequency = fs/2*linspace(0,1,np/2+1);
 
 figure(7)
 plot(frequency,oneSidedPowerSpectrum_LP)
-title('One-Sided FFT of heartbeat Data Signal');
+title('One-Sided FFT of heartbeat Data Signal after LPF');
 xlabel('arranged frequency (Hz)');
 ylabel('power');
 
-% figure(8)
+figure(8)
 % spectrogram(filteredData_LP, 256, 250, 256, fs, 'yaxis');
 % title('Spectrogram of of heartbeat Data Signal');
 % colormap('jet'); % Use the 'jet' colormap for better visibility
 % colorbar;
 % caxis([-100 20]) % Adjust the color axis to improve contrast
+
+%% second filter-notch on the big delta at 60 Hz
+% Design parameters
+notchFreq = 60; % Frequency to notch out in Hz
+bandwidth = 5;  % Bandwidth of the notch
+Fs = 800;       % Sampling Frequency
+
+% Create the notch filter
+notchFilter = fdesign.notch('N,F0,BW', 2, notchFreq, bandwidth, Fs);
+notchFilter = design(notchFilter, 'butter');
+
+% Apply the notch filter to the data
+filteredData_notch = filtfilt(notchFilter.sosMatrix, notchFilter.ScaleValues, filteredData_LP);
+
+% Plot the filtered data
+figure(9);
+plot(samples, filteredData_notch);
+xlabel('Sample Index');
+ylabel('Filtered Data Value');
+title('Filtered heartbeat Data using LPF and then notch at 60 Hz');
+
+F_LP_notch=fft(filteredData_notch,np);
+twoSidedPowerSpectrum_LP_notch=abs(F_LP_notch/np);
+frequencyForTwoSidedSpectrum_LP_notch=-np/2:np/2-1;
+
+% Plotting the two-sided FFT
+figure(10)
+plot(frequencyForTwoSidedSpectrum_LP_notch,twoSidedPowerSpectrum_LP_notch);
+title('two-Sided FFT of heartbeat Data Signal after LPF and notch at 60 Hz');
+xlabel('non arranged frequency (Hz)');
+ylabel('power');
+
+% Plotting the one-sided FFT
+oneSidedPowerSpectrum_LP_notch=twoSidedPowerSpectrum_LP_notch(1:np/2+1);
+oneSidedPowerSpectrum_LP_notch(2:end-1)=2*oneSidedPowerSpectrum_LP_notch(2:end-1);
+frequency = fs/2*linspace(0,1,np/2+1);
+
+figure(12)
+plot(frequency,oneSidedPowerSpectrum_LP_notch)
+title('One-Sided FFT of heartbeat Data Signal after LPF and notch at 60 Hz');
+xlabel('arranged frequency (Hz)');
+ylabel('power');
+
+notchFilter = fdesign.notch('N,F0,BW', 2, notchFreq, bandwidth, Fs);
+sosNotchFilter = design(notchFilter, 'butter');
+
+% SOS matrix where each row corresponds to the coefficients of a second-order filter section
+sosMatrix = sosNotchFilter.sosMatrix;
+disp('SOS Coefficients:');
+disp(sosMatrix);
+
+% Scale values for the SOS sections
+scaleValues = sosNotchFilter.ScaleValues;
+disp('Scale Values:');
+disp(scaleValues);
+
+% You can also extract the 'b' and 'a' coefficients if you prefer that format.
+% However, this is not recommended for high order filters due to numerical instability.
+[b, a] = sos2tf(sosNotchFilter.sosMatrix, sosNotchFilter.ScaleValues);
+disp('Numerator coefficients (b):');
+disp(b);
+disp('Denominator coefficients (a):');
+disp(a);
