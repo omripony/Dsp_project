@@ -156,40 +156,30 @@ disp(b);
 disp('Denominator coefficients of the LPF(a):');
 disp(a);
 
-%% third filter-HPF on the big delta at DC frequency
-hpCutoff = 2;  % Very low cutoff frequency, just above 0 Hz
-hpOrder = 4;     % Possibly a higher filter order for a sharper cutoff
+%% third filter-HPF on the noise before 20 Hz
+load HP_coeff.mat;
 
-% Normalize the cutoff frequency w.r.t Nyquist frequency (half the sampling rate)
-Wn = hpCutoff / (fs/2);
-
-% Design a Butterworth high-pass filter
-[hpB, hpA] = butter(hpOrder, Wn, 'high');
-
-% Display the filter coefficients
-disp('Filter numerator coefficients of the HPF(b):');
-disp(hpB);
-disp('Filter denominator coefficients of the HPF(a):');
-disp(hpA);
+% Apply the SOS filter to the data
+filteredData_LP_notch_HP = sosfilt(SOS_HP, filteredData_notch);
+filteredData_LP_notch_HP = filteredData_LP_notch_HP * G(end);
 
 % Apply the high-pass filter to the data
-filteredData_HP = filtfilt(hpB, hpA, filteredData_notch);
 
 % Plot the filtered data
 figure(13);
-plot(samples, filteredData_HP);
+plot(samples, filteredData_LP_notch_HP);
 xlabel('Sample Index');
 ylabel('Filtered Data Value (after LPF,NOTCH AND HPF)');
-title('Filtered heartbeat Data using LPF and then notch at 60 Hz and then HPF for DC noise');
+title('Filtered heartbeat Data using LPF and then notch at 60 Hz and then HPF for low frequencies noise');
 
-F_LP_notch_HP=fft(filteredData_HP,np);
+F_LP_notch_HP=fft(filteredData_LP_notch_HP,np);
 twoSidedPowerSpectrum_LP_notch=abs(F_LP_notch_HP/np);
 frequencyForTwoSidedSpectrum_LP_notch_HP=-np/2:np/2-1;
 
 % Plotting the two-sided FFT
 figure(14)
 plot(frequencyForTwoSidedSpectrum_LP_notch_HP,twoSidedPowerSpectrum_LP_notch);
-title('two-Sided FFT of heartbeat Data Signal after LPF and notch at 60 Hz and then HPF for DC noise');
+title('two-Sided FFT of heartbeat Data Signal after LPF and notch at 60 Hz and then HPF for low frequencies noise');
 xlabel('non arranged frequency (Hz)');
 ylabel('power');
 
@@ -200,6 +190,6 @@ frequency = fs/2*linspace(0,1,np/2+1);
 
 figure(15)
 plot(frequency,oneSidedPowerSpectrum_LP_notch_HP)
-title('One-Sided FFT of heartbeat Data Signal after LPF and notch at 60 Hz and then HPF for DC noise');
+title('One-Sided FFT of heartbeat Data Signal after LPF and notch at 60 Hz and then HPF for low frequencies noise');
 xlabel('arranged frequency (Hz)');
 ylabel('power');
