@@ -30,7 +30,7 @@ frequencyForTwoSidedSpectrum=-np/2:np/2-1;
 oneSidedPowerSpectrum=twoSidedPowerSpectrum(1:np/2+1);
 oneSidedPowerSpectrum(2:end-1)=2*oneSidedPowerSpectrum(2:end-1);
 frequency = fs/2*linspace(0,1,np/2+1);
-figure(3)
+figure(2)
 plot(frequency,oneSidedPowerSpectrum)
 title('One-Sided FFT of heartbeat Data Signal');
 xlabel('arranged frequency (Hz)');
@@ -44,7 +44,7 @@ filteredData_LP = sosfilt(SOS_LP, data);
 filteredData_LP = filteredData_LP * G_LP(end);
 
 % Now you can plot the filtered data
-figure(5);
+figure(3);
 plot(samples, filteredData_LP);
 xlabel('Sample Index');
 ylabel('Filtered heartbeat Data Value');
@@ -59,7 +59,7 @@ oneSidedPowerSpectrum_LP=twoSidedPowerSpectrum_LP(1:np/2+1);
 oneSidedPowerSpectrum_LP(2:end-1)=2*oneSidedPowerSpectrum_LP(2:end-1);
 frequency = fs/2*linspace(0,1,np/2+1);
 
-figure(7)
+figure(4)
 plot(frequency,oneSidedPowerSpectrum_LP)
 title('One-Sided FFT of heartbeat Data Signal after LPF');
 xlabel('arranged frequency (Hz)');
@@ -71,7 +71,7 @@ filteredData_notch = sosfilt(SOS_notch, filteredData_LP);
 filteredData_notch = filteredData_notch * G_notch(end);
 
 % Plot the filtered data
-figure(9);
+figure(5);
 plot(samples, filteredData_notch);
 xlabel('Sample Index');
 ylabel('Filtered Data Value');
@@ -86,7 +86,7 @@ oneSidedPowerSpectrum_LP_notch=twoSidedPowerSpectrum_LP_notch(1:np/2+1);
 oneSidedPowerSpectrum_LP_notch(2:end-1)=2*oneSidedPowerSpectrum_LP_notch(2:end-1);
 frequency = fs/2*linspace(0,1,np/2+1);
 
-figure(12)
+figure(6)
 plot(frequency,oneSidedPowerSpectrum_LP_notch)
 title('One-Sided FFT of heartbeat Data Signal after LPF and notch at 60 Hz');
 xlabel('arranged frequency (Hz)');
@@ -102,7 +102,7 @@ filteredData_LP_notch_HP = filteredData_LP_notch_HP * G_HP(end);
 % Apply the high-pass filter to the data
 
 % Plot the filtered data
-figure(13);
+figure(7);
 plot(samples, filteredData_LP_notch_HP);
 xlabel('Sample Index');
 ylabel('Filtered Data Value (after LPF,NOTCH AND HPF)');
@@ -112,19 +112,12 @@ F_LP_notch_HP=fft(filteredData_LP_notch_HP,np);
 twoSidedPowerSpectrum_LP_notch=abs(F_LP_notch_HP/np);
 frequencyForTwoSidedSpectrum_LP_notch_HP=-np/2:np/2-1;
 
-% Plotting the two-sided FFT
-figure(14)
-plot(frequencyForTwoSidedSpectrum_LP_notch_HP,twoSidedPowerSpectrum_LP_notch);
-title('two-Sided FFT of heartbeat Data Signal after LPF and notch at 60 Hz and then HPF for low frequencies noise');
-xlabel('non arranged frequency (Hz)');
-ylabel('power');
-
 % Plotting the one-sided FFT
 oneSidedPowerSpectrum_LP_notch_HP=twoSidedPowerSpectrum_LP_notch(1:np/2+1);
 oneSidedPowerSpectrum_LP_notch_HP(2:end-1)=2*oneSidedPowerSpectrum_LP_notch_HP(2:end-1);
 frequency = fs/2*linspace(0,1,np/2+1);
 
-figure(15)
+figure(8)
 plot(frequency,oneSidedPowerSpectrum_LP_notch_HP)
 title('One-Sided FFT of heartbeat Data Signal after LPF and notch at 60 Hz and then HPF for low frequencies noise');
 xlabel('arranged frequency (Hz)');
@@ -135,7 +128,7 @@ ylabel('power');
 [peaks, locs] = findpeaks(filteredData_LP_notch_HP, 'MINPEAKDISTANCE', round(0.5*fs));
 
 % Plot peaks
-figure(16);
+figure(9);
 plot(samples, filteredData_LP_notch_HP, locs, peaks, 'rv');
 xlabel('Sample Index');
 ylabel('Filtered Heartbeat Data Value');
@@ -153,7 +146,7 @@ disp('Calculated Pulse:');
 disp(pulse);
 
 % Plot peaks
-figure(16);
+figure(9);
 plot(samples, filteredData_LP_notch_HP, locs, peaks, 'rv');
 xlabel('Sample Index');
 ylabel('Filtered Heartbeat Data Value');
