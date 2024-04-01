@@ -164,7 +164,7 @@ saveas(gcf,'10-One-Sided FFT of the filtered heartbeat Data Signal and after abs
 
 %% digital filter to smooth the abs of the filtered signal  
 
-filtered_values = digital_filter(abs_of_the_filtered_signal, 2);
+filtered_values = digital_filter(abs_of_the_filtered_signal, 10);
 figure(11);
 plot(samples, filtered_values);
 xlabel('Sample Index', 'Interpreter', 'latex', 'FontSize', 14);
@@ -187,7 +187,7 @@ title('One-Sided FFT of the filtered heartbeat Data Signal and after abs and dig
 xlabel('arranged frequency (Hz)', 'Interpreter', 'latex', 'FontSize', 14);
 ylabel('power', 'Interpreter', 'latex', 'FontSize', 14);
 set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
-saveas(gcf,'12-One-Sided FFT of the filtered heartbeat Data Signal and after abs and digital filter.png'); % Saves the current figure to a PNG file
+saveas(gcf,'10-One-Sided FFT of the filtered heartbeat Data Signal and after abs and digital filter.png'); % Saves the current figure to a PNG file
 
 %% smooth the output of the digital filter using another LPF 
 
@@ -200,32 +200,32 @@ plot(samples, smooth_signal,'b');
 xlabel('Sample Index', 'Interpreter', 'latex', 'FontSize', 14);
 ylabel('Smoothed Signal Value', 'Interpreter', 'latex', 'FontSize', 14);
 title('Smoothed Signal after Envelope Detector and another LPF', 'Interpreter', 'latex', 'FontSize', 14);
-hold on;
-Threshold = 5.6E6; % This is an example value; you may need to adjust it based on your signal
-yline(Threshold, '--r'); % Add a red dashed line at the threshold value
-hold off;
+%hold on;
+%Threshold = 100; % This is an example value; you may need to adjust it based on your signal
+%yline(Threshold, '--r'); % Add a red dashed line at the threshold value
+%hold off;
 set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
-saveas(gcf,'13-Smoothed Signal after Envelope Detector and another LPF.png'); % Saves the current figure to a PNG file
+saveas(gcf,'11-Smoothed Signal after Envelope Detector and another LPF.png'); % Saves the current figure to a PNG file
 
 F_abs_envelop_LFP = fft(smooth_signal, np);
-twoSidedPowerSpectrum_abs_envelop_LPF=abs(F_abs_envelop_LFP/np);
+twoSidedPowerSpectrum_abs_envelop =abs(F_abs_envelop/np);
 
 % Plotting the one-sided FFT
-oneSidedPowerSpectrum_abs_envelop_LPF=twoSidedPowerSpectrum_abs_envelop_LPF(1:np/2+1);
-oneSidedPowerSpectrum_abs_envelop_LPF(2:end-1)=2*oneSidedPowerSpectrum_abs_envelop_LPF(2:end-1);
+oneSidedPowerSpectrum_abs_envelop =twoSidedPowerSpectrum_abs_envelop(1:np/2+1);
+oneSidedPowerSpectrum_abs_envelop(2:end-1)=2*oneSidedPowerSpectrum_abs_envelop(2:end-1);
 frequency = fs/2*linspace(0,1,np/2+1);
 
-figure(14)
-plot(frequency,oneSidedPowerSpectrum_abs_envelop_LPF)
-title('One-Sided FFT of the filtered heartbeat Data Signal after abs and envelop detector and another LPF', 'Interpreter', 'latex', 'FontSize', 14);
+figure(12)
+plot(frequency,oneSidedPowerSpectrum_abs_envelop)
+title('One-Sided FFT of the filtered heartbeat Data Signal after abs and envelop detector', 'Interpreter', 'latex', 'FontSize', 14);
 xlabel('arranged frequency (Hz)', 'Interpreter', 'latex', 'FontSize', 14);
 ylabel('power', 'Interpreter', 'latex', 'FontSize', 14);
 set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
-saveas(gcf,'14-Smoothed Signal after Envelope Detector and another LPF in frequency domain .png'); % Saves the current figure to a PNG file
+saveas(gcf,'12-Smoothed Signal after Envelope Detector in frequency domain.png'); % Saves the current figure to a PNG file
 
 %% After applying filters and possibly the envelope detector
 % Call peak_count to find peaks in the smoothed signal
-[peak_count_result, peak_idx_array] = peak_count(smooth_signal, Threshold);
+[peak_count_result, peak_idx_array] = peak_count(smoothedSignal, Threshold);
 
 % Display the count of detected peaks
 disp(['Detected Peaks: ', num2str(peak_count_result)]);
@@ -265,13 +265,25 @@ function [peak_count, peak_idx_array] = peak_count(filtered_arr, Threshold)
 
         % Increment sample count and check if one second has passed
         sample_cnt = sample_cnt + 1;
-        if (sample_cnt == 800)  % Assuming fs = 800 Hz
+        if (sample_cnt == 2000)  % Assuming fs = 2000 Hz
             sample_cnt = 0;  % Reset sample count after one second
             % Here you would call your time measurement function
             % time_peaks();
         end
     end
 end
+
+% function filtered_arr = digital_filter(filtered_arr, num)
+%     % Assuming filtered_arr is your signal array and num is the decrement value
+%     % which creates the negative slope to simulate envelope detection.
+% 
+%     for idx = 2:length(filtered_arr)
+%         if filtered_arr(idx) < filtered_arr(idx - 1)
+%             % Subtract num to create a negative slope, without going below zero.
+%             filtered_arr(idx) = max(filtered_arr(idx - 1) - num, 0);
+%         end
+%     end
+% end
 
 function time_peaks(peak_idx_array, fs)
     persistent prev_s1_delta prev_s12_delta peak_cnt s1_delta s12_delta;
