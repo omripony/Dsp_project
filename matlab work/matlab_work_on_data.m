@@ -201,8 +201,8 @@ xlabel('Sample Index', 'Interpreter', 'latex', 'FontSize', 14);
 ylabel('Smoothed Signal Value', 'Interpreter', 'latex', 'FontSize', 14);
 title('Smoothed Signal after Envelope Detector and another LPF', 'Interpreter', 'latex', 'FontSize', 14);
 hold on;
-Threshold = 5.6E6; % This is an example value; you may need to adjust it based on your signal
-yline(Threshold, '--r'); % Add a red dashed line at the threshold value
+Threshold1 = 1.5E7; % This is an example value; you may need to adjust it based on your signal
+yline(Threshold1, '--r'); % Add a red dashed line at the threshold value
 hold off;
 set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
 saveas(gcf,'13-Smoothed Signal after Envelope Detector and another LPF.png'); % Saves the current figure to a PNG file
@@ -225,12 +225,13 @@ saveas(gcf,'14-Smoothed Signal after Envelope Detector and another LPF in freque
 
 %% After applying filters and possibly the envelope detector
 % Call peak_count to find peaks in the smoothed signal
-[peak_count_result, peak_idx_array] = peak_count(smooth_signal, Threshold);
+[peak_count_result, peak_idx_array] = peak_count(smooth_signal, Threshold1);
 
 % Display the count of detected peaks
 disp(['Detected Peaks: ', num2str(peak_count_result)]);
 
 % Call time_peaks to analyze the time between peaks
+average_interval = time_peaks(peak_idx_array, fs);
 
 % Calculate heart rate from detected peaks
 if length(peak_idx_array) > 1
@@ -242,79 +243,67 @@ else
     disp('Not enough peaks detected to estimate heart rate.');
 end
 
-function [peak_count, peak_idx_array] = peak_count(filtered_arr, Threshold)
+%% 
+figure(15); 
+plot(samples, smooth_signal,'b'); % Plotting the smoothed signal
+hold on; % Hold on to plot additional markers
+
+% Assuming peak_idx_array contains the indices of all detected peaks
+for i = 1:length(peak_idx_array)
+    plot(peak_idx_array(i), smooth_signal(peak_idx_array(i)), 'rx', 'MarkerSize', 10, 'LineWidth', 2); % Mark peak with red 'x'
+end
+
+xlabel('Sample Index', 'Interpreter', 'latex', 'FontSize', 14);
+ylabel('Smoothed Signal Value', 'Interpreter', 'latex', 'FontSize', 14);
+title('Smoothed Signal with Detected Peaks', 'Interpreter', 'latex', 'FontSize', 14);
+set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size
+hold off; % Release the figure for further commands
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function [peak_count, peak_idx_array] = peak_count(filtered_arr, Threshold1)
     peak_count = 0;
-    flag = 0;
-    peak_idx = 0;
-    prev_peak_idx = 0;
     peak_idx_array = [];  % This will store the indices of the peaks
-    sample_cnt = 0;  % Initialize sample count
-
-    for idx = 1:length(filtered_arr)
-        % Detect the rising edge of the peak
-        if (filtered_arr(idx) >= Threshold && flag == 0)
+    
+    for idx = 2:length(filtered_arr)-1
+        % Check if the current point is a peak: higher than the threshold1 and its neighbors
+        if (filtered_arr(idx) > Threshold1) && ...
+           (filtered_arr(idx) > filtered_arr(idx-1)) && ...
+           (filtered_arr(idx) > filtered_arr(idx+1))
+           
             peak_count = peak_count + 1;  % Increment peak counter
-            prev_peak_idx = peak_idx;  % Save the previous peak index
-            peak_idx = idx;  % Update the current peak index
             peak_idx_array = [peak_idx_array, idx];  % Store the peak index
-            flag = 1;  % Set the flag indicating a peak has started
-        % Detect the falling edge of the peak
-        elseif (filtered_arr(idx) < Threshold)
-            flag = 0;  % Reset the flag
-        end
-
-        % Increment sample count and check if one second has passed
-        sample_cnt = sample_cnt + 1;
-        if (sample_cnt == 800)  % Assuming fs = 800 Hz
-            sample_cnt = 0;  % Reset sample count after one second
-            % Here you would call your time measurement function
-            % time_peaks();
         end
     end
 end
 
-function time_peaks(peak_idx_array, fs)
-    persistent prev_s1_delta prev_s12_delta peak_cnt s1_delta s12_delta;
-    if isempty(prev_s1_delta)
-        prev_s1_delta = 0;
-        prev_s12_delta = 0;
-        peak_cnt = 0;
-        s1_delta = 0;
-        s12_delta = 0;
-    end
 
-    % Assuming peak_idx_array is a two-row array where the first row contains the index
-    % and the second row contains the peak type (1 for S1, 2 for S2)
-    for i = 2:size(peak_idx_array, 2)
-        % Update deltas
-        if peak_idx_array(2, i) == 1 % if current peak is S1
-            s1_delta = peak_idx_array(1, i) - peak_idx_array(1, i-1);
-            prev_s1_delta = s1_delta;
-        else % if current peak is S2
-            s12_delta = peak_idx_array(1, i) - peak_idx_array(1, i-1);
-            prev_s12_delta = s12_delta;
-        end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function average_interval = time_peaks(peak_idx_array, fs)
+    % Calculate time intervals between consecutive peaks
+    if length(peak_idx_array) > 1
+        peak_intervals = diff(peak_idx_array) / fs; % Time between peaks in seconds
+        average_interval = mean(peak_intervals); % Average time interval between peaks
         
-        % Increment peak count
-        peak_cnt = peak_cnt + 1;
+        % Displaying the calculated intervals for your reference
+        disp(['Average Interval Between Peaks: ', num2str(average_interval), ' seconds']);
         
-        % Calculate BPM for primary peaks (S1-S1)
-        if mod(peak_cnt, 2) == 0 && mod(peak_cnt, 2) == 0
-            bps = (fs / s1_delta); % Calculate beats per second
-            bpm = bps * 60; % Convert to beats per minute
-            fprintf('S1 peak index = %d S1 peak index = %d\n', peak_idx_array(1, i-1), peak_idx_array(1, i));
-            fprintf('s1_delta = %.2f [0.5msec]\n', s1_delta);
-            fprintf('bps = %.2f bpm = %.2f\n', bps, bpm);
-        % Calculate BPM for secondary peaks (S1-S2)
-        elseif mod(peak_cnt, 2) ~= 0 && peak_cnt > 1
-            fprintf('S1 peak index = %d S2 peak index = %d\n', peak_idx_array(1, i-1), peak_idx_array(1, i));
-            fprintf('s12_delta = %.2f [0.5msec]\n', s12_delta);
+        % For each interval, display or process as needed
+        for i = 1:length(peak_intervals)
+            disp(['Interval ', num2str(i), ': ', num2str(peak_intervals(i)), ' seconds']);
         end
+    else
+        disp('Not enough peaks detected to calculate intervals.');
+        average_interval = NaN; % Not a Number, indicating insufficient data
     end
 end
+
 
 function filtered_arr = digital_filter(filtered_arr, num)
-    % MATLAB arrays are 1-based, so we start the loop from 2.
     for idx = 2:length(filtered_arr)
         if filtered_arr(idx) < filtered_arr(idx - 1)
             filtered_arr(idx) = filtered_arr(idx - 1) - num;

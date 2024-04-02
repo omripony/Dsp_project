@@ -164,7 +164,7 @@ saveas(gcf,'10-One-Sided FFT of the filtered heartbeat Data Signal and after abs
 
 %% digital filter to smooth the abs of the filtered signal  
 
-filtered_values = digital_filter(abs_of_the_filtered_signal, 10);
+filtered_values = digital_filter(abs_of_the_filtered_signal, 2);
 figure(11);
 plot(samples, filtered_values);
 xlabel('Sample Index', 'Interpreter', 'latex', 'FontSize', 14);
@@ -187,7 +187,7 @@ title('One-Sided FFT of the filtered heartbeat Data Signal and after abs and dig
 xlabel('arranged frequency (Hz)', 'Interpreter', 'latex', 'FontSize', 14);
 ylabel('power', 'Interpreter', 'latex', 'FontSize', 14);
 set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
-saveas(gcf,'10-One-Sided FFT of the filtered heartbeat Data Signal and after abs and digital filter.png'); % Saves the current figure to a PNG file
+saveas(gcf,'12-One-Sided FFT of the filtered heartbeat Data Signal and after abs and digital filter.png'); % Saves the current figure to a PNG file
 
 %% smooth the output of the digital filter using another LPF 
 
@@ -200,37 +200,38 @@ plot(samples, smooth_signal,'b');
 xlabel('Sample Index', 'Interpreter', 'latex', 'FontSize', 14);
 ylabel('Smoothed Signal Value', 'Interpreter', 'latex', 'FontSize', 14);
 title('Smoothed Signal after Envelope Detector and another LPF', 'Interpreter', 'latex', 'FontSize', 14);
-%hold on;
-%Threshold = 100; % This is an example value; you may need to adjust it based on your signal
-%yline(Threshold, '--r'); % Add a red dashed line at the threshold value
-%hold off;
+hold on;
+Threshold = 5.6E6; % This is an example value; you may need to adjust it based on your signal
+yline(Threshold, '--r'); % Add a red dashed line at the threshold value
+hold off;
 set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
-saveas(gcf,'11-Smoothed Signal after Envelope Detector and another LPF.png'); % Saves the current figure to a PNG file
+saveas(gcf,'13-Smoothed Signal after Envelope Detector and another LPF.png'); % Saves the current figure to a PNG file
 
 F_abs_envelop_LFP = fft(smooth_signal, np);
-twoSidedPowerSpectrum_abs_envelop =abs(F_abs_envelop/np);
+twoSidedPowerSpectrum_abs_envelop_LPF=abs(F_abs_envelop_LFP/np);
 
 % Plotting the one-sided FFT
-oneSidedPowerSpectrum_abs_envelop =twoSidedPowerSpectrum_abs_envelop(1:np/2+1);
-oneSidedPowerSpectrum_abs_envelop(2:end-1)=2*oneSidedPowerSpectrum_abs_envelop(2:end-1);
+oneSidedPowerSpectrum_abs_envelop_LPF=twoSidedPowerSpectrum_abs_envelop_LPF(1:np/2+1);
+oneSidedPowerSpectrum_abs_envelop_LPF(2:end-1)=2*oneSidedPowerSpectrum_abs_envelop_LPF(2:end-1);
 frequency = fs/2*linspace(0,1,np/2+1);
 
-figure(12)
-plot(frequency,oneSidedPowerSpectrum_abs_envelop)
-title('One-Sided FFT of the filtered heartbeat Data Signal after abs and envelop detector', 'Interpreter', 'latex', 'FontSize', 14);
+figure(14)
+plot(frequency,oneSidedPowerSpectrum_abs_envelop_LPF)
+title('One-Sided FFT of the filtered heartbeat Data Signal after abs and envelop detector and another LPF', 'Interpreter', 'latex', 'FontSize', 14);
 xlabel('arranged frequency (Hz)', 'Interpreter', 'latex', 'FontSize', 14);
 ylabel('power', 'Interpreter', 'latex', 'FontSize', 14);
 set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
-saveas(gcf,'12-Smoothed Signal after Envelope Detector in frequency domain.png'); % Saves the current figure to a PNG file
+saveas(gcf,'14-Smoothed Signal after Envelope Detector and another LPF in frequency domain .png'); % Saves the current figure to a PNG file
 
 %% After applying filters and possibly the envelope detector
 % Call peak_count to find peaks in the smoothed signal
-[peak_count_result, peak_idx_array] = peak_count(smoothedSignal, Threshold);
+[peak_count_result, peak_idx_array] = peak_count(smooth_signal, Threshold);
 
 % Display the count of detected peaks
 disp(['Detected Peaks: ', num2str(peak_count_result)]);
 
 % Call time_peaks to analyze the time between peaks
+average_interval = time_peaks(peak_idx_array, fs);
 
 % Calculate heart rate from detected peaks
 if length(peak_idx_array) > 1
@@ -241,6 +242,26 @@ if length(peak_idx_array) > 1
 else
     disp('Not enough peaks detected to estimate heart rate.');
 end
+
+%% 
+figure(15); 
+plot(samples, smooth_signal,'b'); % Plotting the smoothed signal
+hold on; % Hold on to plot additional markers
+
+% Assuming peak_idx_array contains the indices of all detected peaks
+for i = 1:length(peak_idx_array)
+    plot(peak_idx_array(i), smooth_signal(peak_idx_array(i)), 'rx', 'MarkerSize', 10, 'LineWidth', 2); % Mark peak with red 'x'
+end
+
+xlabel('Sample Index', 'Interpreter', 'latex', 'FontSize', 14);
+ylabel('Smoothed Signal Value', 'Interpreter', 'latex', 'FontSize', 14);
+title('Smoothed Signal with Detected Peaks', 'Interpreter', 'latex', 'FontSize', 14);
+set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size
+hold off; % Release the figure for further commands
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [peak_count, peak_idx_array] = peak_count(filtered_arr, Threshold)
     peak_count = 0;
@@ -265,68 +286,38 @@ function [peak_count, peak_idx_array] = peak_count(filtered_arr, Threshold)
 
         % Increment sample count and check if one second has passed
         sample_cnt = sample_cnt + 1;
-        if (sample_cnt == 2000)  % Assuming fs = 2000 Hz
+        if (sample_cnt == 800)  % Assuming fs = 800 Hz
             sample_cnt = 0;  % Reset sample count after one second
             % Here you would call your time measurement function
-            % time_peaks();
+        time_peaks(peak_idx_array,800);
         end
     end
 end
 
-% function filtered_arr = digital_filter(filtered_arr, num)
-%     % Assuming filtered_arr is your signal array and num is the decrement value
-%     % which creates the negative slope to simulate envelope detection.
-% 
-%     for idx = 2:length(filtered_arr)
-%         if filtered_arr(idx) < filtered_arr(idx - 1)
-%             % Subtract num to create a negative slope, without going below zero.
-%             filtered_arr(idx) = max(filtered_arr(idx - 1) - num, 0);
-%         end
-%     end
-% end
 
-function time_peaks(peak_idx_array, fs)
-    persistent prev_s1_delta prev_s12_delta peak_cnt s1_delta s12_delta;
-    if isempty(prev_s1_delta)
-        prev_s1_delta = 0;
-        prev_s12_delta = 0;
-        peak_cnt = 0;
-        s1_delta = 0;
-        s12_delta = 0;
-    end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    % Assuming peak_idx_array is a two-row array where the first row contains the index
-    % and the second row contains the peak type (1 for S1, 2 for S2)
-    for i = 2:size(peak_idx_array, 2)
-        % Update deltas
-        if peak_idx_array(2, i) == 1 % if current peak is S1
-            s1_delta = peak_idx_array(1, i) - peak_idx_array(1, i-1);
-            prev_s1_delta = s1_delta;
-        else % if current peak is S2
-            s12_delta = peak_idx_array(1, i) - peak_idx_array(1, i-1);
-            prev_s12_delta = s12_delta;
-        end
+function average_interval = time_peaks(peak_idx_array, fs)
+    % Calculate time intervals between consecutive peaks
+    if length(peak_idx_array) > 1
+        peak_intervals = diff(peak_idx_array) / fs; % Time between peaks in seconds
+        average_interval = mean(peak_intervals); % Average time interval between peaks
         
-        % Increment peak count
-        peak_cnt = peak_cnt + 1;
+        % Displaying the calculated intervals for your reference
+        disp(['Average Interval Between Peaks: ', num2str(average_interval), ' seconds']);
         
-        % Calculate BPM for primary peaks (S1-S1)
-        if mod(peak_cnt, 2) == 0 && mod(peak_cnt, 2) == 0
-            bps = (fs / s1_delta); % Calculate beats per second
-            bpm = bps * 60; % Convert to beats per minute
-            fprintf('S1 peak index = %d S1 peak index = %d\n', peak_idx_array(1, i-1), peak_idx_array(1, i));
-            fprintf('s1_delta = %.2f [0.5msec]\n', s1_delta);
-            fprintf('bps = %.2f bpm = %.2f\n', bps, bpm);
-        % Calculate BPM for secondary peaks (S1-S2)
-        elseif mod(peak_cnt, 2) ~= 0 && peak_cnt > 1
-            fprintf('S1 peak index = %d S2 peak index = %d\n', peak_idx_array(1, i-1), peak_idx_array(1, i));
-            fprintf('s12_delta = %.2f [0.5msec]\n', s12_delta);
+        % For each interval, display or process as needed
+        for i = 1:length(peak_intervals)
+            disp(['Interval ', num2str(i), ': ', num2str(peak_intervals(i)), ' seconds']);
         end
+    else
+        disp('Not enough peaks detected to calculate intervals.');
+        average_interval = NaN; % Not a Number, indicating insufficient data
     end
 end
+
 
 function filtered_arr = digital_filter(filtered_arr, num)
-    % MATLAB arrays are 1-based, so we start the loop from 2.
     for idx = 2:length(filtered_arr)
         if filtered_arr(idx) < filtered_arr(idx - 1)
             filtered_arr(idx) = filtered_arr(idx - 1) - num;
