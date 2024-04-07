@@ -201,24 +201,28 @@ ylabel('power', 'Interpreter', 'latex', 'FontSize', 14);
 set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
 saveas(gcf,'12-One-Sided FFT of the filtered heartbeat Data Signal and after abs and digital filter.png'); % Saves the current figure to a PNG file
 
-%% After applying filters and possibly the envelope detector
+%% After applying filters and the envelope detector
 % Call peak_count to find peaks in the smoothed signal
-[peak_count_result, peak_idx_array] = peak_count(smooth_signal, Threshold1);
+Threshold_s1 = ...; % Define the threshold for S1 detection
+Threshold_s2 = ...; % Define the threshold for S2 detection
+Threshold_s1d = ...; % Define the threshold for S1 decay
+Threshold_s2d = ...; % Define the threshold for S2 decay
+sample_cnt = 0; % Initialize the sample counter
 
-% Display the count of detected peaks
-disp(['Detected Peaks: ', num2str(peak_count_result)]);
+peak_cnt = 0;
+peak_idx_array = [];
+flag = 0;
+prev_peak_idx = 0;
+peak_idx = 0;
 
-% Call time_peaks to analyze the time between peaks
-average_interval = time_peaks(peak_idx_array, fs);
-
-% Calculate heart rate from detected peaks
-if length(peak_idx_array) > 1
-    peak_intervals = diff(peak_idx_array) / fs; % Time between peaks in seconds
-    average_interval = mean(peak_intervals); % Average time interval between peaks
-    heart_rate = 1 / average_interval * 60; % Convert to beats per minute (bpm)
-    disp(['Estimated Heart Rate: ', num2str(heart_rate), ' bpm']);
-else
-    disp('Not enough peaks detected to estimate heart rate.');
+for idx = 2:length(abs_arr_envelope) % Assuming your signal starts from index 1
+    [count, idx_array, flag, prev_peak, current_peak] = ...
+        peak_count(abs_arr_envelope, idx, Threshold_s1, Threshold_s2, Threshold_s1d, Threshold_s2d, flag, prev_peak_idx, peak_idx, sample_cnt);
+    peak_cnt = count;
+    peak_idx_array = idx_array;
+    prev_peak_idx = prev_peak;
+    peak_idx = current_peak;
+    sample_cnt = sample_cnt + 1; % Increment the sample count
 end
 
 %% 
@@ -241,21 +245,54 @@ hold off; % Release the figure for further commands
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [peak_count, peak_idx_array] = peak_count(filtered_arr, Threshold1)
-    peak_count = 0;
-    peak_idx_array = [];  % This will store the indices of the peaks
+function [peak_cnt, peak_idx_array, flag, prev_peak_idx, peak_idx] =function peak_count()
+    % Initialize variables if they aren't already defined elsewhere in your code
+    persistent peak_cnt prev_peak_idx peak_idx flag
+    if isempty(peak_cnt)
+        peak_cnt = 0;
+        prev_peak_idx = 0;
+        peak_idx = 0;
+        flag = 0;
+    end
+
+    % Thresholds and sample counter should be defined outside this function
+    % Threshold_s1, Threshold_s2, Threshold_s2d, Threshold_s1d
+    % and 'sample_cnt' should be initialized before calling this function
+
+    % idx should be passed to this function or defined within
+    % for idx = 1:length(abs_arr_envelope)
+    % Detect rising and falling of every peak
+    if (abs_arr_envelope(idx) > Threshold_s1 && flag == 0) && ...
+            (abs_arr_envelope(idx) > abs_arr_envelope(idx - 1)) && ...
+            (abs_arr_envelope(idx) > abs_arr_envelope(idx + 1))
+        
+        peak_cnt = peak_cnt + 1;
+        prev_peak_idx = peak_idx;
+        peak_idx = idx;
+        flag = 1;  % Make sure the peak is measured only once
+    elseif (abs_arr_envelope(idx) < Threshold_s2 && flag == 1) && ...
+            (abs_arr_envelope(idx) > abs_arr_envelope(idx - 1)) && ...
+            (abs_arr_envelope(idx) > abs_arr_envelope(idx + 1))
+        
+        peak_cnt = peak_cnt + 1;
+        prev_peak_idx = peak_idx;
+        peak_idx = idx;
+        flag = 1;  % Make sure the peak is measured only once
+    elseif (abs(abs_arr_envelope(idx)) > Threshold_s2d && ...
+            abs_arr_envelope(idx) < Threshold_s1d) || ...
+            (abs_arr_envelope(idx) < Threshold_s2d)
+        
+        abs_arr_envelope(idx) = 0;
+        flag = 0;
+    end
     
-    for idx = 2:length(filtered_arr)-1
-        % Check if the current point is a peak: higher than the threshold1 and its neighbors
-        if (filtered_arr(idx) > Threshold1) && ...
-           (filtered_arr(idx) > filtered_arr(idx-1)) && ...
-           (filtered_arr(idx) > filtered_arr(idx+1))
-           
-            peak_count = peak_count + 1;  % Increment peak counter
-            peak_idx_array = [peak_idx_array, idx];  % Store the peak index
-        end
+    % Check if 800 samples have been counted (assuming fs = 800Hz)
+    if (sample_cnt == 800)  % 800 counts in every second for fs = 800Hz
+        sample_cnt = 0;  % Reset the counter after crossing one second
+        time_peaks();  % Call the time measure function
     end
 end
+
 
 
 
