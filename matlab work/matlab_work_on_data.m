@@ -8,8 +8,6 @@ filename = 'raw_data.txt';
 % Use the readmatrix function to import the data
 data = readmatrix(filename);
 % Display the imported data
-disp('Imported Data:');
-disp(data);
 
 fs = 800; % Sampling frequency in Hz
 samples = 1:length(data);
@@ -164,16 +162,30 @@ saveas(gcf,'10-One-Sided FFT of the filtered heartbeat Data Signal and after abs
 
 %% digital filter to smooth the abs of the filtered signal  
 
-filtered_values = digital_filter(abs_of_the_filtered_signal, 2);
+abs_arr_envelope = zeros(size(abs_of_the_filtered_signal));
+num =3; % Define the correct value
+divider_factor =2; % Define the correct value
+
+for idx = 2:length(abs_of_the_filtered_signal) % Start from 2 since MATLAB is 1-indexed
+    abs_arr_envelope(idx) = abs_of_the_filtered_signal(idx);
+    if (abs_arr_envelope(idx) < abs_arr_envelope(idx - 1) - 1/divider_factor)
+        if (mod(abs_arr_envelope(idx - 1), num) ~= 0)
+            abs_arr_envelope(idx) = abs_arr_envelope(idx - 1) - num;
+        else
+            abs_arr_envelope(idx) = abs(abs_arr_envelope(idx - 1) - abs_arr_envelope(idx)) / divider_factor;
+        end
+    end
+end
+
 figure(11);
-plot(samples, filtered_values);
+plot(samples, abs_arr_envelope);
 xlabel('Sample Index', 'Interpreter', 'latex', 'FontSize', 14);
 ylabel('filtered signal after digital filter', 'Interpreter', 'latex', 'FontSize', 14);
 title('filtered signal after digital filter', 'Interpreter', 'latex', 'FontSize', 14);
 set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
 saveas(gcf,'11-filtered signal after digital filter.png'); % Saves the current figure to a PNG file
 
-F_after_after_abs_and_digital_filter=fft(filtered_values,np);
+F_after_after_abs_and_digital_filter=fft(abs_arr_envelope,np);
 twoSidedPowerSpectrum_after_abs=abs(F_after_after_abs_and_digital_filter/np);
 
 % Plotting the one-sided FFT
@@ -188,40 +200,6 @@ xlabel('arranged frequency (Hz)', 'Interpreter', 'latex', 'FontSize', 14);
 ylabel('power', 'Interpreter', 'latex', 'FontSize', 14);
 set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
 saveas(gcf,'12-One-Sided FFT of the filtered heartbeat Data Signal and after abs and digital filter.png'); % Saves the current figure to a PNG file
-
-%% smooth the output of the digital filter using another LPF 
-
-load LP_2_coeff.mat;
-smooth_signal = sosfilt(SOS_LP_2, filtered_values);
-smooth_signal = smooth_signal * G_LP_2(end);
-
-figure(13);
-plot(samples, smooth_signal,'b');
-xlabel('Sample Index', 'Interpreter', 'latex', 'FontSize', 14);
-ylabel('Smoothed Signal Value', 'Interpreter', 'latex', 'FontSize', 14);
-title('Smoothed Signal after Envelope Detector and another LPF', 'Interpreter', 'latex', 'FontSize', 14);
-hold on;
-Threshold1 = 1.5E7; % This is an example value; you may need to adjust it based on your signal
-yline(Threshold1, '--r'); % Add a red dashed line at the threshold value
-hold off;
-set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
-saveas(gcf,'13-Smoothed Signal after Envelope Detector and another LPF.png'); % Saves the current figure to a PNG file
-
-F_abs_envelop_LFP = fft(smooth_signal, np);
-twoSidedPowerSpectrum_abs_envelop_LPF=abs(F_abs_envelop_LFP/np);
-
-% Plotting the one-sided FFT
-oneSidedPowerSpectrum_abs_envelop_LPF=twoSidedPowerSpectrum_abs_envelop_LPF(1:np/2+1);
-oneSidedPowerSpectrum_abs_envelop_LPF(2:end-1)=2*oneSidedPowerSpectrum_abs_envelop_LPF(2:end-1);
-frequency = fs/2*linspace(0,1,np/2+1);
-
-figure(14)
-plot(frequency,oneSidedPowerSpectrum_abs_envelop_LPF)
-title('One-Sided FFT of the filtered heartbeat Data Signal after abs and envelop detector and another LPF', 'Interpreter', 'latex', 'FontSize', 14);
-xlabel('arranged frequency (Hz)', 'Interpreter', 'latex', 'FontSize', 14);
-ylabel('power', 'Interpreter', 'latex', 'FontSize', 14);
-set(gcf, 'Position', [100, 100, 800, 600]); % Set figure position and size [left bottom width height]
-saveas(gcf,'14-Smoothed Signal after Envelope Detector and another LPF in frequency domain .png'); % Saves the current figure to a PNG file
 
 %% After applying filters and possibly the envelope detector
 % Call peak_count to find peaks in the smoothed signal
@@ -245,7 +223,7 @@ end
 
 %% 
 figure(15); 
-plot(samples, smooth_signal,'b'); % Plotting the smoothed signal
+plot(samples, abs_arr_envelope,'b'); % Plotting the smoothed signal
 hold on; % Hold on to plot additional markers
 
 % Assuming peak_idx_array contains the indices of all detected peaks
@@ -299,14 +277,5 @@ function average_interval = time_peaks(peak_idx_array, fs)
     else
         disp('Not enough peaks detected to calculate intervals.');
         average_interval = NaN; % Not a Number, indicating insufficient data
-    end
-end
-
-
-function filtered_arr = digital_filter(filtered_arr, num)
-    for idx = 2:length(filtered_arr)
-        if filtered_arr(idx) < filtered_arr(idx - 1)
-            filtered_arr(idx) = filtered_arr(idx - 1) - num;
-        end
     end
 end
